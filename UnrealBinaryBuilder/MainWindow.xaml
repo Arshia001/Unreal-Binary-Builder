@@ -117,9 +117,9 @@
 							<StackPanel Orientation="Horizontal">
 								<Grid Margin="10" Width="540">
 									<CheckBox x:Name="bZipBuild" Content="Zip final build." VerticalAlignment="Top" HorizontalAlignment="Left"/>
-									<TextBox x:Name="ZipPath" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,30,0,0" IsEnabled="{Binding IsChecked, ElementName=bZipBuild}" Width="458"/>
-									<Button x:Name="SetZipPathLocation" Content="Browse" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="463,30,0,0" ToolTip="Browse and select the folder where you want to move the zip file after Engine build." IsEnabled="{Binding IsChecked, ElementName=bZipBuild}" Click="SetZipPathLocation_Click" />
-									<GroupBox Header="Contents to zip" VerticalAlignment="Top" HorizontalAlignment="Left" IsEnabled="{Binding IsChecked, ElementName=bZipBuild}" Height="155" Margin="6,77,0,0">
+									<TextBox x:Name="ZipPath" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,30,0,0" Width="458"/>
+									<Button x:Name="SetZipPathLocation" Content="Browse" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="463,30,0,0" ToolTip="Browse and select the folder where you want to move the zip file after Engine build." Click="SetZipPathLocation_Click" />
+									<GroupBox Header="Contents to zip" VerticalAlignment="Top" HorizontalAlignment="Left" Height="155" Margin="6,77,0,0">
 										<Grid>
 											<CheckBox x:Name="bIncludeCoreFiles" Content="Core" IsEnabled="False" IsChecked="True" VerticalAlignment="Top" HorizontalAlignment="Left" ToolTip="Required files. Cannot edit."/>
 											<CheckBox x:Name="bIncludePDB" Content="Include PDB" VerticalAlignment="Top" HorizontalAlignment="Left" ToolTip="If true, include *.pdb in zip. This significantly increases zip size." Margin="0 25"/>
@@ -132,7 +132,8 @@
 											<CheckBox x:Name="bIncludeTemplates" Content="Include Templates" VerticalAlignment="Top" HorizontalAlignment="Left" ToolTip="If true, include templates (e.g: First Person, Third Person, Vehicle etc.)." Margin="360,0,0,0" />
 										</Grid>
 									</GroupBox>
-									<CheckBox x:Name="bFastCompression" Content="Enable Fast Compression" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,250,0,0" IsEnabled="{Binding IsChecked, ElementName=bZipBuild}" ToolTip="If true, uses fast but least effect compression.&#xA;If false, uses Best Compression which greatly reduces size but also the slowest."/>
+									<CheckBox x:Name="bFastCompression" Content="Enable Fast Compression" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,250,0,0" ToolTip="If true, uses fast but least effect compression.&#xA;If false, uses Best Compression which greatly reduces size but also the slowest."/>
+									<Button x:Name="CreateZip" Content="Create Zip" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,244,0,0" ToolTip="Create a zip of the currently built engine files" Click="CreateZip_Click" />
 								</Grid>
 								<Grid Margin="10" Width="700">
 									<GroupBox Header="Zip Status" Margin="10">
@@ -310,7 +311,6 @@
 					<hc:SimpleText x:Name="StepLabel" Text="Step: " Margin="5" Foreground="#FFE6E0E0"/>
 					<hc:SimpleText x:Name="StatusLabel" Text="Status: " Margin="5" Foreground="#FFE6E0E0"/>
 					<hc:SimpleText x:Name="ProcessedFilesLabel" Text="Compiled: 0" Margin="5" Foreground="#FFE6E0E0" st:StackPanel.Fill="Fill"/>
-					<Button x:Name="CheckUpdateBtn" Content="Check for Updates" Height="20" Padding="10,0,10,0" FontSize="10" Width="120" Click="CheckUpdateBtn_Click" />
 					<Button x:Name="OpenSettingsBtn" Content="Open Settings" Height="20" Padding="10,0,10,0" FontSize="10" IsEnabled="False" Width="120" Click="OpenSettingsBtn_Click"/>
 					<Button x:Name="OpenLogFolderBtn" Content="Open Log Folder" Margin="0 0 10 0" Height="20" Padding="10,0,10,0" FontSize="10" IsEnabled="False" Width="120" Click="OpenLogFolderBtn_Click"/>
 				</st:StackPanel>

@@ -16,7 +16,6 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using UnrealBinaryBuilder.Classes;
 using UnrealBinaryBuilder.UserControls;
-using UnrealBinaryBuilderUpdater;
 using System.Windows.Data;
 
 namespace UnrealBinaryBuilder
@@ -186,10 +185,6 @@ namespace UnrealBinaryBuilder
 		private PluginCard CurrentPluginBeingBuilt = null;
 		private List<string> PluginBuildEnginePath = new List<string>();
 		private Dialog aboutDialog = null;
-		private Dialog downloadDialog = null;
-		private DownloadDialog downloadDialogWindow = null;
-		private static UBBUpdater unrealBinaryBuilderUpdater = null;
-		private bool bUpdateAvailable = false;
 
 		public bool AutomationExePathPathIsValid => File.Exists(AutomationExePath);
 
@@ -275,11 +270,6 @@ namespace UnrealBinaryBuilder
 			}
 			ZipStatusLabel.Visibility = Visibility.Visible;
 			ZipStausStackPanel.Visibility = Visibility.Collapsed;
-
-			if (SettingsJSON.bCheckForUpdatesAtStartup)
-			{
-				CheckForUpdates();
-			}
 		}
 
 		public static void OpenBrowser(string InURL)
@@ -288,139 +278,8 @@ namespace UnrealBinaryBuilder
 			Process.Start(new ProcessStartInfo("cmd", $"/c start {InURL}") { CreateNoWindow = true });
 		}
 
-		public void DownloadUpdate()
-		{
-			if (CurrentProcess == null)
-			{
-				if (bUpdateAvailable)
-				{
-					CheckUpdateBtn.IsEnabled = false;
-					CheckUpdateBtn.Content = "Downloading...";
-					unrealBinaryBuilderUpdater.UpdateDownloadStartedEventHandler += DownloadUpdateProgressStart;
-					unrealBinaryBuilderUpdater.UpdateDownloadFinishedEventHandler += DownloadUpdateProgressFinish;
-					unrealBinaryBuilderUpdater.UpdateProgressEventHandler += DownloadUpdateProgress;
-					unrealBinaryBuilderUpdater.DownloadUpdate();
-				}
-			}
-			else
-			{
-				CloseUpdateDialogWindow();
-				ShowToastMessage($"{GetCurrentProcessName()} is currently running. You can check for updates after it is done.", LogViewer.EMessageType.Error);
-			}
-		}
-
-		public void CloseUpdateDialogWindow()
-		{
-			if (downloadDialog != null)
-			{
-				downloadDialog.Close();
-				downloadDialog = null;
-				downloadDialogWindow = null;
-			}
-		}
-
-		private void CheckForUpdates()
-		{
-			if (CurrentProcess == null)
-			{
-				CheckUpdateBtn.IsEnabled = false;
-				CheckUpdateBtn.Content = "Checking...";
-				if (unrealBinaryBuilderUpdater == null)
-				{
-					unrealBinaryBuilderUpdater = new UBBUpdater();
-				}
-
-				GameAnalyticsCSharp.AddDesignEvent("Update:Check");
-				unrealBinaryBuilderUpdater.SilentUpdateFinishedEventHandler += OnUpdateCheck;
-				unrealBinaryBuilderUpdater.CheckForUpdatesSilently();
-			}
-			else
-			{
-				ShowToastMessage($"{GetCurrentProcessName()} is currently running. You can check for updates after it is done.", LogViewer.EMessageType.Error);
-			}
-		}
-
-		private void CheckUpdateBtn_Click(object sender, RoutedEventArgs e)
-		{
-			if (bUpdateAvailable)
-			{
-				DownloadUpdate();
-			}
-			else
-			{
-				CheckForUpdates();
-			}
-		}
-
-		private void OnUpdateCheck(object sender, UpdateProgressFinishedEventArgs e)
-		{
-			CheckUpdateBtn.Content = "Check for Update";
-			switch (e.appUpdateCheckStatus)
-			{
-				case AppUpdateCheckStatus.UpdateAvailable:
-					bUpdateAvailable = true;
-					CheckUpdateBtn.Content = $"Install Update {e.castItem.Version}";
-					ShowToastMessage($"Update {e.castItem.Version} is available.", LogViewer.EMessageType.Info, true, false, "", 2);
-					downloadDialogWindow = new DownloadDialog(this, e.castItem.Version);
-					downloadDialog = Dialog.Show(downloadDialogWindow);
-					break;
-				case AppUpdateCheckStatus.NoUpdate:
-					ShowToastMessage("You are running the latest version.", LogViewer.EMessageType.Info, true, false, "", 2);
-					break;
-				case AppUpdateCheckStatus.CouldNotDetermine:
-					ShowToastMessage("Failed to determine update settings. Please try again later.", LogViewer.EMessageType.Error);
-					break;
-				case AppUpdateCheckStatus.UserSkip:
-					break;
-			}
-			CheckUpdateBtn.IsEnabled = true;
-		}
-
-		private void DownloadUpdateProgressStart(object sender, UpdateProgressDownloadStartEventArgs e)
-		{
-			GameAnalyticsCSharp.AddDesignEvent($"Update:Download:{e.Version}");
-			if (downloadDialogWindow == null)
-			{
-				downloadDialogWindow = new DownloadDialog(this, e.Version);
-				downloadDialog = Dialog.Show(downloadDialogWindow);
-			}
-			downloadDialogWindow.Initialize(e.UpdateSize);
-		}
-
-		private void DownloadUpdateProgress(object sender, UpdateProgressDownloadEventArgs progressDownloadEventArgs)
-		{
-			downloadDialogWindow.SetProgress(progressDownloadEventArgs.AppUpdateProgress);
-		}
-		private void DownloadUpdateProgressFinish(object sender, UpdateProgressDownloadFinishEventArgs e)
-		{
-			string TargetDownloadDirectory = Path.Combine(BuilderSettings.PROGRAM_SAVED_PATH, "Updates", e.castItem.Version);
-			if (Directory.Exists(TargetDownloadDirectory) == false)
-			{
-				Directory.CreateDirectory(TargetDownloadDirectory);
-			}
-
-			using (Ionic.Zip.ZipFile zip = new Ionic.Zip.ZipFile(e.UpdateFilePath))
-			{
-				zip.ExtractProgress += (o, args) =>
-				{
-					if (args.EventType == Ionic.Zip.ZipProgressEventType.Extracting_AfterExtractAll)
-					{
-						GameAnalyticsCSharp.AddDesignEvent($"Update:Install:{downloadDialogWindow.VersionText}");
-						unrealBinaryBuilderUpdater.UpdateDownloadStartedEventHandler -= DownloadUpdateProgressStart;
-						unrealBinaryBuilderUpdater.UpdateDownloadFinishedEventHandler -= DownloadUpdateProgressFinish;
-						unrealBinaryBuilderUpdater.UpdateProgressEventHandler -= DownloadUpdateProgress;
-						unrealBinaryBuilderUpdater.CloseApplicationEventHandler += CloseApplication;
-						unrealBinaryBuilderUpdater.InstallUpdate();
-						Process.Start("explorer.exe", TargetDownloadDirectory);
-					}
-				};
-				zip.ExtractAll(TargetDownloadDirectory, Ionic.Zip.ExtractExistingFileAction.OverwriteSilently);
-			}
-		}
-
 		private void CloseApplication(object sender, EventArgs e)
 		{
-			downloadDialog.Close();
 			Close();
 		}
 
@@ -623,28 +482,7 @@ namespace UnrealBinaryBuilder
 				switch (currentProcessType)
 				{
 					case CurrentProcessType.BuildUnrealEngine:
-						if (postBuildSettings.CanSaveToZip())
-						{
-							EngineTabControl.SelectedIndex = 1;
-							if (FinalBuildPath == null)
-							{
-								if (UnrealBinaryBuilderHelpers.IsUnrealEngine5)
-								{
-									FinalBuildPath = Path.GetFullPath(AutomationExePath).Replace(@$"\Engine\Binaries\DotNET\{UnrealBinaryBuilderHelpers.AUTOMATION_TOOL_NAME}", @"\LocalBuilds\Engine").Replace(Path.GetFileName(AutomationExePath), "");
-								}
-								else
-								{
-									FinalBuildPath = Path.GetFullPath(AutomationExePath).Replace(@"\Engine\Binaries\DotNET", @"\LocalBuilds\Engine").Replace(Path.GetFileName(AutomationExePath), "");
-								}
-								GameAnalyticsCSharp.LogEvent("Final Build Path was null. Fixed.", GameAnalyticsSDK.Net.EGAErrorSeverity.Info);
-							}
-							AddLogEntry($"Creating ZIP file. Installed build can be found in {FinalBuildPath}");
-							postBuildSettings.PrepareToSave();
-							postBuildSettings.SaveToZip(FinalBuildPath, ZipPath.Text);
-							AddLogEntry($"Saving zip file to {ZipPath.Text}");
-							WriteToLogFile();
-							return;
-						}
+						DoCreateZip();
 						break;
 					case CurrentProcessType.SetupBat:
 						GameAnalyticsCSharp.AddProgressEnd("Build", "Setup");
@@ -694,6 +532,33 @@ namespace UnrealBinaryBuilder
 			TryShutdown();
 			LogMessageErrors = null;
 		}
+
+		void CreateZip_Click(object sender, RoutedEventArgs e) => DoCreateZip();
+
+		void DoCreateZip()
+        {
+            if (postBuildSettings.CanSaveToZip())
+            {
+                EngineTabControl.SelectedIndex = 1;
+                if (FinalBuildPath == null)
+                {
+                    if (UnrealBinaryBuilderHelpers.IsUnrealEngine5)
+                    {
+                        FinalBuildPath = Path.GetFullPath(AutomationExePath).Replace(@$"\Engine\Binaries\DotNET\{UnrealBinaryBuilderHelpers.AUTOMATION_TOOL_NAME}", @"\LocalBuilds\Engine").Replace(Path.GetFileName(AutomationExePath), "");
+                    }
+                    else
+                    {
+                        FinalBuildPath = Path.GetFullPath(AutomationExePath).Replace(@"\Engine\Binaries\DotNET", @"\LocalBuilds\Engine").Replace(Path.GetFileName(AutomationExePath), "");
+                    }
+                    GameAnalyticsCSharp.LogEvent("Final Build Path was null. Fixed.", GameAnalyticsSDK.Net.EGAErrorSeverity.Info);
+                }
+                AddLogEntry($"Creating ZIP file. Installed build can be found in {FinalBuildPath}");
+                postBuildSettings.PrepareToSave();
+                postBuildSettings.SaveToZip(FinalBuildPath, ZipPath.Text);
+                AddLogEntry($"Saving zip file to {ZipPath.Text}");
+                WriteToLogFile();
+            }
+        }
 
 		public void TryShutdown()
 		{
